@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 /*
 struct sigaction {
     void     (*sa_handler)(int);
@@ -62,7 +63,6 @@ int32_t main() {
   listen_socket_addr.sin_addr.s_addr = INADDR_ANY;
   //listen_socket_addr.sin_addr.s_addr = inet_addr("10.20.30.2");
 
-  socklen_t addrlen = sizeof(listen_socket_addr);
   // man 7 ip
   ret_val = bind(listen_socket, (const struct sockaddr *restrict)&listen_socket_addr, sizeof(listen_socket_addr));
   if (ret_val == -1) {
@@ -108,6 +108,7 @@ int32_t main() {
 
     uint8_t buffer[16];
     size_t len = sizeof(buffer);
+    uint32_t pos = 0;
     while (1) {
         if (exit_flag == 1) {
           printf("Program was interrupted\n");
@@ -117,7 +118,7 @@ int32_t main() {
           return -7;
         }
 
-        ssize_t recv_val = recv(communication_socket, buffer, len, MSG_DONTWAIT);
+        ssize_t recv_val = recv(communication_socket, buffer + pos, len, MSG_DONTWAIT);
         if (recv_val == -1) {
             if (errno == EAGAIN) {
                 printf("Data hasn't received\n");
@@ -135,8 +136,24 @@ int32_t main() {
      //       continue;
             break; // Start listening again
         }
-        // TODO Process data
+        // Data processing
+        len -= recv_val;
+        pos += recv_val;
+        if (pos >= 4) {
+          if(strstr((char *)buffer, "\n") != NULL) {
+            printf("Command: %s", buffer);
+            len = sizeof(buffer);
+            pos = 0;
+          }
+        }
+        if (len == 0) {
+//          printf("Buffer: %s\n", buffer);
+          len = sizeof(buffer);
+          pos = 0;
+        }
+
     } // Receiving loop
+
     printf("Listening was started\n");
   } // Accepting loop
 //  send();
