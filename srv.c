@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "rbuff.h"
 /*
 struct sigaction {
     void     (*sa_handler)(int);
@@ -34,7 +36,21 @@ static void srv_signal_handle(int32_t sig_num) {
 	}
 }
 
+void rbuff_test() {
+  struct rbuff_t rbuff;
+  init_rbuff(&rbuff);
+  uint8_t buffer0[0x40] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
+  uint8_t buffer1[0x40] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  size_t data_length0 = 0x10;
+  size_t data_length1 = 0;
+  int32_t ret_val = copy_to_rbuff(&rbuff, buffer0, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0: %ld\n", ret_val, data_length0);
+
+}
+
 int32_t main() {
+  rbuff_test();
+
   if (shared_value == 1) {
     printf("Dich hapened!!!\n");
     exit(-8);

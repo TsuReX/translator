@@ -1,0 +1,60 @@
+#include "rbuff.h"
+/*
+struct rbuff_t {
+  uint8_t ring_buffer[RBUFF_SIZE];
+  uint32_t head;
+  uint32_t tail;
+  uint32_t full;
+};
+*/
+
+void init_rbuff(struct rbuff_t * rbuff) {
+  rbuff->head = 0;
+  rbuff->tail = 0;
+  rbuff->full = 0;
+}
+int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t *data_length) {
+  if (rbuff == NULL)
+    return -1;
+
+  if (src_buffer == NULL)
+    return -2;
+  
+  if (data_length == NULL)
+    return -3;
+
+  if (*data_length == 0)
+    return 0;
+
+  if (rbuff->full == 1)
+    return -4;
+
+  // head points to byte containing data
+  // tail points to free byte
+  // tail == head && full == 0 means that buffer is empty
+  // tail == head && full == 1 means that buffer is full
+
+  size_t free_length = 0;
+  if (rbuff->tail > rbuff->head) {
+    free_length = rbuff->tail - rbuff->head;
+  } else { // rbuff->tail <= rbuff->head
+    free_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  }
+
+  if (*data_length > free_length) {
+    *data_length = free_length;
+  }
+  uint32_t i = 0;
+  uint32_t tail = rbuff->tail;
+
+  for (; i < *data_length ;) {
+    rbuff->ring_buffer[tail &  (RBUFF_SIZE - 1)] = src_buffer[i];
+    tail++;
+    i++;
+  }
+
+  return 0;
+}
+// int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *data_length, uint32_t remove);
+// int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, uint32_t * sub_buffer_pos);
+// int32_t flush_rbuf(struct rbuff_t *rbuff, size_t * flush_length);
