@@ -56,6 +56,7 @@ static void rbuff_test() {
 
   printf("sizeof(size_t): %ld\n",sizeof(size_t));
 /* copy_to_rbuff()  */
+  printf("\n\n");
   printf("copy_to_rbuff() function testing\n");
   printf("buffer0: ");
   print_buffer(buffer0, sizeof(buffer0));
@@ -65,6 +66,8 @@ static void rbuff_test() {
 
   data_length1 = 0x11;
   size_t data_length1_before = data_length1;
+
+  debug_print_rbuff(&rbuff);
 
  /* copy_from_rbuff()  */
   printf("\n\n");
@@ -78,6 +81,7 @@ static void rbuff_test() {
   printf("buffer1 after: ");
   print_buffer(buffer1, sizeof(buffer1));
 
+ debug_print_rbuff(&rbuff);
 }
 
 int32_t main() {
