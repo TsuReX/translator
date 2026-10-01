@@ -19,7 +19,7 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
 
   if (src_buffer == NULL)
     return -2;
-  
+
   if (data_length == NULL)
     return -3;
 
@@ -35,10 +35,10 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
   // tail == head && full == 1 means that buffer is full
 
   size_t free_length = 0;
-  if (rbuff->tail > rbuff->head) {
-    free_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail <= rbuff->head
-    free_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  if (rbuff->tail >= rbuff->head) {
+    free_length = RBUFF_SIZE - (rbuff->tail - rbuff->head);
+  } else { // rbuff->tail < rbuff->head
+    free_length = rbuff->head - rbuff->tail;
   }
 
   if (*data_length > free_length) {
@@ -53,8 +53,49 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
     i++;
   }
 
+  rbuff->tail = tail;
+
   return 0;
 }
-// int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *data_length, uint32_t remove);
+
+int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *data_length, uint32_t remove) {
+  if (rbuff == NULL)
+    return -1;
+
+  if (dst_buffer == NULL)
+    return -2;
+
+  if (data_length == NULL)
+    return -3;
+
+  if (*data_length == 0)
+    return 0;
+
+  size_t rbuff_length = 0;
+  if (rbuff->tail > rbuff->head) {
+    rbuff_length = rbuff->tail - rbuff->head;
+  } else { // rbuff->tail <= rbuff->head
+    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  }
+
+  if (*data_length > rbuff_length) {
+    *data_length = rbuff_length;
+  }
+
+  uint32_t i = 0;
+  uint32_t head = rbuff->head;
+
+  for (; i < *data_length ;) {
+    dst_buffer[i] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
+    head++;
+    i++;
+  }
+
+  if (remove != 0) {
+    rbuff->head = head;
+  }
+
+  return 0;
+}
 // int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, uint32_t * sub_buffer_pos);
 // int32_t flush_rbuf(struct rbuff_t *rbuff, size_t * flush_length);

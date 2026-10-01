@@ -36,20 +36,53 @@ static void srv_signal_handle(int32_t sig_num) {
 	}
 }
 
-void rbuff_test() {
+static void print_buffer(const uint8_t * buffer, size_t data_length) {
+//  printf("Buffer: ");
+  for (uint64_t i = 0; i < data_length; i++) {
+    printf("0x%X ", buffer[i]);
+  }
+  printf("\n");
+}
+
+static void rbuff_test() {
   struct rbuff_t rbuff;
   init_rbuff(&rbuff);
-  uint8_t buffer0[0x40] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-  uint8_t buffer1[0x40] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t buffer0[0x20] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0};
+  uint8_t buffer1[0x20] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   size_t data_length0 = 0x10;
   size_t data_length1 = 0;
-  int32_t ret_val = copy_to_rbuff(&rbuff, buffer0, &data_length0);
-  printf("copy_to_rbuff(): %d, data_length0: %ld\n", ret_val, data_length0);
+  size_t data_length0_before = data_length0;
+  int32_t ret_val = 0;
+
+  printf("sizeof(size_t): %ld\n",sizeof(size_t));
+/* copy_to_rbuff()  */
+  printf("copy_to_rbuff() function testing\n");
+  printf("buffer0: ");
+  print_buffer(buffer0, sizeof(buffer0));
+
+  ret_val = copy_to_rbuff(&rbuff, buffer0, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+
+  data_length1 = 0x11;
+  size_t data_length1_before = data_length1;
+
+ /* copy_from_rbuff()  */
+  printf("\n\n");
+  printf("copy_from_rbuff() function testing\n");
+  printf("buffer1 before: ");
+  print_buffer(buffer1, sizeof(buffer1));
+
+  ret_val = copy_from_rbuff(&rbuff, buffer1, &data_length1, 0);
+  printf("copy_from_rbuff(): %d, data_length1 before: %ld, data_length1 after %ld\n", ret_val, data_length1_before, data_length1);
+
+  printf("buffer1 after: ");
+  print_buffer(buffer1, sizeof(buffer1));
 
 }
 
 int32_t main() {
   rbuff_test();
+  return 0;
 
   if (shared_value == 1) {
     printf("Dich hapened!!!\n");
