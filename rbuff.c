@@ -46,13 +46,10 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
   if (*data_length > free_length) {
     *data_length = free_length;
   }
-  uint32_t i = 0;
-  uint32_t tail = rbuff->tail;
 
-  for (; i < *data_length ;) {
+  uint32_t tail = rbuff->tail;
+  for (uint32_t i = 0; i < *data_length; i++, tail++) {
     rbuff->ring_buffer[tail &  (RBUFF_SIZE - 1)] = src_buffer[i];
-    tail++;
-    i++;
   }
 
   rbuff->tail = tail;
@@ -84,13 +81,9 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
     *data_length = rbuff_length;
   }
 
-  uint32_t i = 0;
-  uint32_t head = rbuff->head;
-
-  for (; i < *data_length ;) {
+  uint32_t head = head = rbuff->head;
+  for (uint32_t i = 0; i < *data_length; i++, head++) {
     dst_buffer[i] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
-    head++;
-    i++;
   }
 
   if (remove != 0) {
@@ -99,7 +92,59 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
 
   return 0;
 }
-// int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, uint32_t * sub_buffer_pos);
+
+int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
+  if (rbuff == NULL)
+    return -1;
+
+  if (sub_buffer == NULL)
+    return -2;
+
+  if (sub_buffer_pos == NULL)
+    return -3;
+
+  if (data_length == 0){
+    *sub_buffer_pos = -1;
+    return 0;
+  }
+  size_t rbuff_length = 0;
+  if (rbuff->tail > rbuff->head) {
+    rbuff_length = rbuff->tail - rbuff->head;
+  } else { // rbuff->tail <= rbuff->head
+    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  }
+
+  if (data_length > rbuff_length)
+    return -5;
+
+  uint32_t i = 0;
+  uint32_t head = rbuff->head;
+
+  uint32_t match = 0;
+  for (; i < data_length ;i++, head++) {
+    if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i]) {
+      match = 1;
+      for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++) {
+        if (rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)] != sub_buffer[j]) {
+          head = _head;
+          i = j;
+          match = 0;
+          break; // for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++)
+        }
+      } // for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++)
+
+      if (match == 1) {
+        *sub_buffer_pos = head;
+        break; // for (; i < data_length ;)
+      }
+
+    } // if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i])
+
+  } // for (; i < data_length ;)
+
+  return 0;
+}
+
 // int32_t flush_rbuf(struct rbuff_t *rbuff, size_t * flush_length);
 
 void debug_print_rbuff(const struct rbuff_t * rbuff) {
@@ -125,14 +170,10 @@ void debug_print_rbuff(const struct rbuff_t * rbuff) {
   }
   printf("\tdata length: %ld\n", rbuff_length);
 
-  uint32_t i = 0;
-  uint32_t head = rbuff->head;
 
   printf("Data: ");
-  for (; i < rbuff_length ;) {
+  for (uint32_t i = 0, head = rbuff->head; i < rbuff_length; i++, head++) {
     printf("0x%X ", rbuff->ring_buffer[head & (RBUFF_SIZE - 1)]);
-    head++;
-    i++;
   }
   printf("\n");
 }
