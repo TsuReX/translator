@@ -235,6 +235,22 @@ void rbuff_test() {
   debug_print_rbuff(&rbuff);
 }
 
+void process_data(struct rbuff_t * rbuff) {
+  uint8_t cmd_head[] = "RL";
+  uint8_t cmd_tail[] = "\n";
+
+  debug_print_rbuff(rbuff);
+  int32_t cmd_head_pos = 0;
+  int32_t cmd_tail_pos = 0;
+
+  int32_t ret_val = find_in_rbuff(rbuff, cmd_head, 2, &cmd_head_pos);
+  ret_val = find_in_rbuff(rbuff, cmd_tail, 1, &cmd_tail_pos);
+
+  printf("cmd_head_pos: %d, cmd_tail_pos: %d\n", cmd_head_pos, cmd_tail_pos);
+
+
+}
+
 int32_t main() {
 //  rbuff_test();
 //  return 0;
@@ -313,7 +329,6 @@ int32_t main() {
     uint8_t buffer[16];
     size_t len = sizeof(buffer);
     init_rbuff(&rbuff);
-    debug_print_rbuff(&rbuff);
     while (1) {
         if (exit_flag == 1) {
           printf("Program was interrupted\n");
@@ -344,8 +359,8 @@ int32_t main() {
         // Data processing
         size_t data_length = recv_val;
         copy_to_rbuff(&rbuff, buffer, &data_length);
+        process_data(&rbuff);
     } // Receiving loop
-    debug_print_rbuff(&rbuff);
     printf("Listening was started\n");
   } // Accepting loop
 //  send();
