@@ -60,7 +60,7 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
     rbuff->ring_buffer[tail &  (RBUFF_SIZE - 1)] = src_buffer[i];
   }
 
-  rbuff->tail = tail;
+  rbuff->tail = tail & (RBUFF_SIZE - 1);
 
   return 0;
 }
@@ -218,9 +218,15 @@ void debug_print_rbuff(const struct rbuff_t * rbuff) {
   printf("\tdata length: %ld\n", rbuff_length);
 
 
-  printf("Data: ");
+  printf("Data from head to tail: ");
   for (uint32_t i = 0, head = rbuff->head; i < rbuff_length; i++, head++) {
     printf("0x%X ", rbuff->ring_buffer[head & (RBUFF_SIZE - 1)]);
+  }
+  printf("\n");
+
+  printf("Data from 0 to RBUFF_SIZE: ");
+  for (uint32_t i = 0; i < RBUFF_SIZE; i++) {
+    printf("0x%X ", rbuff->ring_buffer[i]);
   }
   printf("\n");
 }

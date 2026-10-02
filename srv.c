@@ -100,18 +100,70 @@ static void rbuff_test() {
 
   data_length0 = 8;
   data_length0_before = data_length0;
-  copy_from_rbuff(&rbuff, buffer0, &data_length0, 1);
+  ret_val = copy_from_rbuff(&rbuff, buffer0, &data_length0, 1);
   printf("copy_from_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
   print_buffer(buffer0, sizeof(buffer0));
   debug_print_rbuff(&rbuff);
 
-
   data_length1 = 18;
   data_length1_before = data_length1;
-  copy_from_rbuff(&rbuff, buffer1, &data_length1, 1);
+  ret_val = copy_from_rbuff(&rbuff, buffer1, &data_length1, 1);
   printf("copy_from_rbuff(): %d, data_length1 before: %ld, data_length1 after %ld\n", ret_val, data_length1_before, data_length1);
   print_buffer(buffer1, sizeof(buffer1));
   debug_print_rbuff(&rbuff);
+  /* 3 */
+  printf("**3**\n");
+  uint8_t buffer3[] = {1,2,3,4,5,6,7,8,9,0xA};
+  printf("buffer3");
+  print_buffer(buffer3, sizeof(buffer3));
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = sizeof(buffer3);
+  data_length0_before = data_length0;
+  ret_val = copy_to_rbuff(&rbuff, buffer3, &data_length0);
+  printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
 }
 
 int32_t main() {
