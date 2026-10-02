@@ -140,11 +140,11 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
 
   uint32_t match = 0;
   for (; i < rbuff_length ; i++, head++) {
-    printf("bytes: %d, %d, %d\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[i]);
+//    printf("bytes: %d, %d, %d\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[i]);
     if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i]) {
       match = 1;
       for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++) {
-        printf("bytes: %d, %d, %d\n", _head, rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)], sub_buffer[j]);
+//        printf("bytes: %d, %d, %d\n", _head, rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)], sub_buffer[j]);
         if (rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)] != sub_buffer[j]) {
           head = _head;
           i = j;
@@ -177,20 +177,24 @@ int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {
     return 0;
 
   size_t rbuff_length = 0;
-  if (rbuff->tail >= rbuff->head) {
-    rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail < rbuff->head
-    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      rbuff_length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    rbuff_length = RBUFF_SIZE;
   }
-  
+
   if (rbuff_length < *flush_length) {
     *flush_length = rbuff_length;
     rbuff->head = 0;
     rbuff->tail = 0;
-    rbuff->full = 0;
   } else {
     rbuff->head = (rbuff->head + *flush_length) & (RBUFF_SIZE - 1);
   }
+  rbuff->full = 0;
 
   return 0;
 }
@@ -228,13 +232,13 @@ void debug_print_rbuff(const struct rbuff_t * rbuff) {
 
   printf("Data from head to tail: ");
   for (uint32_t i = 0, head = rbuff->head; i < rbuff_length; i++, head++) {
-    printf("0x%X ", rbuff->ring_buffer[head & (RBUFF_SIZE - 1)]);
+    printf("0x%02X ", rbuff->ring_buffer[head & (RBUFF_SIZE - 1)]);
   }
   printf("\n");
 
   printf("Data from 0 to RBUFF_SIZE: ");
   for (uint32_t i = 0; i < RBUFF_SIZE; i++) {
-    printf("0x%X ", rbuff->ring_buffer[i]);
+    printf("0x%02X ", rbuff->ring_buffer[i]);
   }
   printf("\n");
 }

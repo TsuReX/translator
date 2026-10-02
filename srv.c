@@ -52,7 +52,7 @@ void fill_buffer(uint8_t * buffer, size_t data_length, uint8_t filler) {
     buffer[i] = filler;
 }
 
-static void rbuff_test() {
+void rbuff_test() {
   struct rbuff_t rbuff;
   init_rbuff(&rbuff);
   uint8_t buffer0[0x20] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0, 0xF0};
@@ -176,11 +176,68 @@ static void rbuff_test() {
   ret_val = find_in_rbuff(&rbuff, buffer4, data_length0, &sub_buffer_pos);
   printf("find_in_rbuff(): %d, data_length: %ld, sub_buffer_pos %d\n", ret_val, data_length0, sub_buffer_pos);
 
+  /* flush_rbuff()  */
+  printf("\n\n");
+  printf("find_in_rbuff() function testing\n");
+  /* 1 */
+  data_length0 = 11;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 10;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 9;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 8;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 7;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 6;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 5;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 4;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
+
+  data_length0 = 7;
+  data_length0_before = data_length0;
+  ret_val = flush_rbuff(&rbuff, &data_length0);
+  printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
+  debug_print_rbuff(&rbuff);
 }
 
 int32_t main() {
-  rbuff_test();
-  return 0;
+//  rbuff_test();
+//  return 0;
 
   if (shared_value == 1) {
     printf("Dich hapened!!!\n");
@@ -242,7 +299,7 @@ int32_t main() {
       if (communication_socket == -1) {
           if (errno == EAGAIN) {
               sleep(1);
-              printf("Connection request hasn't received\n");
+//              printf("Connection request hasn't received\n");
               continue;
           }
           perror("Accepting can't be done");
@@ -252,10 +309,11 @@ int32_t main() {
 
 
     printf("Connection %d was accepted\n", communication_socket);
-
+    struct rbuff_t rbuff;
     uint8_t buffer[16];
     size_t len = sizeof(buffer);
-    uint32_t pos = 0;
+    init_rbuff(&rbuff);
+    debug_print_rbuff(&rbuff);
     while (1) {
         if (exit_flag == 1) {
           printf("Program was interrupted\n");
@@ -265,10 +323,10 @@ int32_t main() {
           return -7;
         }
 
-        ssize_t recv_val = recv(communication_socket, buffer + pos, len, MSG_DONTWAIT);
+        ssize_t recv_val = recv(communication_socket, buffer, len, MSG_DONTWAIT);
         if (recv_val == -1) {
             if (errno == EAGAIN) {
-                printf("Data hasn't received\n");
+//                printf("Data hasn't received\n");
                 sleep(1);
                 continue;
             }
@@ -284,23 +342,10 @@ int32_t main() {
             break; // Start listening again
         }
         // Data processing
-        len -= recv_val;
-        pos += recv_val;
-        if (pos >= 4) {
-          if(strstr((char *)buffer, "\n") != NULL) {
-            printf("Command: %s", buffer);
-            len = sizeof(buffer);
-            pos = 0;
-          }
-        }
-        if (len == 0) {
-//          printf("Buffer: %s\n", buffer);
-          len = sizeof(buffer);
-          pos = 0;
-        }
-
+        size_t data_length = recv_val;
+        copy_to_rbuff(&rbuff, buffer, &data_length);
     } // Receiving loop
-
+    debug_print_rbuff(&rbuff);
     printf("Listening was started\n");
   } // Accepting loop
 //  send();
