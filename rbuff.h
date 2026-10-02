@@ -11,6 +11,11 @@ struct rbuff_t {
   uint32_t head;
   uint32_t tail;
   uint32_t full;
+//  TODO: Implement using the following variable
+//  it will allow to avoid using "full" variable
+//  (rbuff_length == RBUFF_SIZE -> buffer is full)
+//  and 'rbuff_length" variable evaluation each time
+//  size_t rbuff_length;
 };
 
 void init_rbuff(struct rbuff_t * rbuff);

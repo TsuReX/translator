@@ -40,10 +40,14 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
 
 
   size_t free_length = 0;
-  if (rbuff->tail >= rbuff->head) {
-    free_length = RBUFF_SIZE - (rbuff->tail - rbuff->head);
-  } else { // rbuff->tail < rbuff->head
-    free_length = rbuff->head - rbuff->tail;
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      free_length = RBUFF_SIZE - (rbuff->tail - rbuff->head);
+    } else { // rbuff->tail < rbuff->head
+      free_length = rbuff->head - rbuff->tail;
+    }
+  } else { // rbuff->full == 1
+    free_length = 0;
   }
 
   if (*data_length > free_length) {
@@ -75,17 +79,21 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
     return 0;
 
   size_t rbuff_length = 0;
-  if (rbuff->tail > rbuff->head) {
-    rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail <= rbuff->head
-    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      rbuff_length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    rbuff_length = RBUFF_SIZE;
   }
 
   if (*data_length > rbuff_length) {
     *data_length = rbuff_length;
   }
 
-  uint32_t head = head = rbuff->head;
+  uint32_t head = rbuff->head;
   for (uint32_t i = 0; i < *data_length; i++, head++) {
     dst_buffer[i] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
   }
@@ -113,9 +121,9 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
     return 0;
   }
   size_t rbuff_length = 0;
-  if (rbuff->tail > rbuff->head) {
+  if (rbuff->tail >= rbuff->head) {
     rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail <= rbuff->head
+  } else { // rbuff->tail < rbuff->head
     rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
   }
 
@@ -161,9 +169,9 @@ int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {
     return 0;
 
   size_t rbuff_length = 0;
-  if (rbuff->tail > rbuff->head) {
+  if (rbuff->tail >= rbuff->head) {
     rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail <= rbuff->head
+  } else { // rbuff->tail < rbuff->head
     rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
   }
   
@@ -187,19 +195,26 @@ void debug_print_rbuff(const struct rbuff_t * rbuff) {
   printf("\tfull: %d\n", rbuff->full);
 
   size_t free_length = 0;
-  if (rbuff->tail >= rbuff->head) {
-    free_length = RBUFF_SIZE - (rbuff->tail - rbuff->head);
-  } else { // rbuff->tail < rbuff->head
-    free_length = rbuff->head - rbuff->tail;
-  }
-  printf("\tfree length: %ld\n", free_length);
-
   size_t rbuff_length = 0;
-  if (rbuff->tail > rbuff->head) {
-    rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail <= rbuff->head
-    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      free_length = RBUFF_SIZE - (rbuff->tail - rbuff->head);
+    } else { // rbuff->tail < rbuff->head
+      free_length = rbuff->head - rbuff->tail;
+    }
+
+    if (rbuff->tail >= rbuff->head) {
+      rbuff_length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    free_length = 0;
+    rbuff_length = RBUFF_SIZE;
   }
+
+  printf("\tfree length: %ld\n", free_length);
   printf("\tdata length: %ld\n", rbuff_length);
 
 

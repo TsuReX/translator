@@ -44,6 +44,14 @@ static void print_buffer(const uint8_t * buffer, size_t data_length) {
   printf("\n");
 }
 
+void fill_buffer(uint8_t * buffer, size_t data_length, uint8_t filler) {
+  if ((buffer == NULL) || (data_length == 0))
+    return;
+
+  for (uint32_t i = 0; i < data_length; i++)
+    buffer[i] = filler;
+}
+
 static void rbuff_test() {
   struct rbuff_t rbuff;
   init_rbuff(&rbuff);
@@ -55,7 +63,7 @@ static void rbuff_test() {
   int32_t ret_val = 0;
 
   printf("sizeof(size_t): %ld\n",sizeof(size_t));
-/* copy_to_rbuff()  */
+  /* copy_to_rbuff()  */
   printf("\n\n");
   printf("copy_to_rbuff() function testing\n");
   printf("buffer0: ");
@@ -69,9 +77,11 @@ static void rbuff_test() {
 
   debug_print_rbuff(&rbuff);
 
- /* copy_from_rbuff()  */
+  /* copy_from_rbuff()  */
   printf("\n\n");
   printf("copy_from_rbuff() function testing\n");
+  /* 1 */
+  printf("**1**\n");
   printf("buffer1 before: ");
   print_buffer(buffer1, sizeof(buffer1));
 
@@ -80,8 +90,28 @@ static void rbuff_test() {
 
   printf("buffer1 after: ");
   print_buffer(buffer1, sizeof(buffer1));
+  debug_print_rbuff(&rbuff);
+  /* 2 */
+  printf("**2**\n");
+  fill_buffer(buffer0, sizeof(buffer0), 0xA5);
+  fill_buffer(buffer1, sizeof(buffer1), 0xFE);
+  print_buffer(buffer0, sizeof(buffer0));
+  print_buffer(buffer1, sizeof(buffer1));
 
- debug_print_rbuff(&rbuff);
+  data_length0 = 8;
+  data_length0_before = data_length0;
+  copy_from_rbuff(&rbuff, buffer0, &data_length0, 1);
+  printf("copy_from_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
+  print_buffer(buffer0, sizeof(buffer0));
+  debug_print_rbuff(&rbuff);
+
+
+  data_length1 = 18;
+  data_length1_before = data_length1;
+  copy_from_rbuff(&rbuff, buffer1, &data_length1, 1);
+  printf("copy_from_rbuff(): %d, data_length1 before: %ld, data_length1 after %ld\n", ret_val, data_length1_before, data_length1);
+  print_buffer(buffer1, sizeof(buffer1));
+  debug_print_rbuff(&rbuff);
 }
 
 int32_t main() {
