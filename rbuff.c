@@ -120,11 +120,16 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
     *sub_buffer_pos = -1;
     return 0;
   }
+
   size_t rbuff_length = 0;
-  if (rbuff->tail >= rbuff->head) {
-    rbuff_length = rbuff->tail - rbuff->head;
-  } else { // rbuff->tail < rbuff->head
-    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      rbuff_length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    rbuff_length = RBUFF_SIZE;
   }
 
   if (data_length > rbuff_length)
@@ -134,10 +139,12 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
   uint32_t head = rbuff->head;
 
   uint32_t match = 0;
-  for (; i < data_length ;i++, head++) {
+  for (; i < rbuff_length ; i++, head++) {
+    printf("bytes: %d, %d, %d\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[i]);
     if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i]) {
       match = 1;
       for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++) {
+        printf("bytes: %d, %d, %d\n", _head, rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)], sub_buffer[j]);
         if (rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)] != sub_buffer[j]) {
           head = _head;
           i = j;
@@ -148,13 +155,14 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
 
       if (match == 1) {
         *sub_buffer_pos = head;
-        break; // for (; i < data_length ;)
+        return 0;
+//        break; // for (; i < rbuff_length ;)
       }
 
     } // if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i])
 
   } // for (; i < data_length ;)
-
+  *sub_buffer_pos = -1;
   return 0;
 }
 

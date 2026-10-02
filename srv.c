@@ -164,6 +164,18 @@ static void rbuff_test() {
   printf("copy_to_rbuff(): %d, data_length0 before: %ld, data_length0 after %ld\n", ret_val, data_length0_before, data_length0);
   debug_print_rbuff(&rbuff);
 
+  /* find_in_rbuff() */
+  printf("\n\n");
+  printf("find_in_rbuff() function testing\n");
+  /* 1 */
+  int32_t sub_buffer_pos = 0xFF;
+  uint8_t buffer4[] = {2,3,4,6};
+  data_length0 = sizeof(buffer4);
+  printf("buffer4: ");
+  print_buffer(buffer4, sizeof(buffer4));
+  ret_val = find_in_rbuff(&rbuff, buffer4, data_length0, &sub_buffer_pos);
+  printf("find_in_rbuff(): %d, data_length: %ld, sub_buffer_pos %d\n", ret_val, data_length0, sub_buffer_pos);
+
 }
 
 int32_t main() {
