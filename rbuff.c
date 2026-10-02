@@ -9,6 +9,13 @@ struct rbuff_t {
 };
 */
 
+// head points to byte containing data
+// tail points to free byte
+// tail == head && full == 0 means that buffer is empty
+// tail == head && full == 1 means that buffer is full
+// new elements are added in tail
+// stored elements are removed from head
+
 void init_rbuff(struct rbuff_t * rbuff) {
   rbuff->head = 0;
   rbuff->tail = 0;
@@ -31,10 +38,6 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
   if (rbuff->full == 1)
     return -4;
 
-  // head points to byte containing data
-  // tail points to free byte
-  // tail == head && full == 0 means that buffer is empty
-  // tail == head && full == 1 means that buffer is full
 
   size_t free_length = 0;
   if (rbuff->tail >= rbuff->head) {
@@ -45,6 +48,7 @@ int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t
 
   if (*data_length > free_length) {
     *data_length = free_length;
+    rbuff->full = 1;
   }
 
   uint32_t tail = rbuff->tail;
@@ -88,12 +92,13 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
 
   if (remove != 0) {
     rbuff->head = head;
+    rbuff->full = 0;
   }
 
   return 0;
 }
 
-int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
+int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
   if (rbuff == NULL)
     return -1;
 
@@ -145,7 +150,34 @@ int32_t find_in_rbuf(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t d
   return 0;
 }
 
-// int32_t flush_rbuf(struct rbuff_t *rbuff, size_t * flush_length);
+int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {  
+  if (rbuff == NULL)
+    return -1;
+
+  if (flush_length == NULL)
+    return -3;
+
+  if (*flush_length == 0)
+    return 0;
+
+  size_t rbuff_length = 0;
+  if (rbuff->tail > rbuff->head) {
+    rbuff_length = rbuff->tail - rbuff->head;
+  } else { // rbuff->tail <= rbuff->head
+    rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+  }
+  
+  if (rbuff_length < *flush_length) {
+    *flush_length = rbuff_length;
+    rbuff->head = 0;
+    rbuff->tail = 0;
+    rbuff->full = 0;
+  } else {
+    rbuff->head = (rbuff->head + *flush_length) & (RBUFF_SIZE - 1);
+  }
+
+  return 0;
+}
 
 void debug_print_rbuff(const struct rbuff_t * rbuff) {
   printf("Ring buffer info:\n");
