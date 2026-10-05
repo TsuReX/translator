@@ -135,33 +135,28 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
   if (data_length > rbuff_length)
     return -5;
 
-  uint32_t i = 0;
-  uint32_t head = rbuff->head;
-
   uint32_t match = 0;
-  for (; i < rbuff_length ; i++, head++) {
-//    printf("bytes: %d, %d, %d\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[i]);
-    if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i]) {
+  for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head; rb_idx < rbuff_length ; head++, rb_idx++) {
+//    printf("bytes: %d, 0x%02X, 0x%02X\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
+    if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx]) {
       match = 1;
-      for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++) {
-//        printf("bytes: %d, %d, %d\n", _head, rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)], sub_buffer[j]);
-        if (rbuff->ring_buffer[_head & (RBUFF_SIZE - 1)] != sub_buffer[j]) {
-          head = _head;
-          i = j;
+      *sub_buffer_pos = head;
+      for (head++, b_idx++, rb_idx++; (b_idx < data_length) && (rb_idx < rbuff_length); head++, rb_idx++, b_idx++) {
+//        printf("bytes: %d, 0x%02X, 0x%02X\n", _head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
+        if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] != sub_buffer[b_idx]) {
           match = 0;
-          break; // for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++)
+          break;
         }
-      } // for (uint32_t j = i + 1, _head = head + 1; j < data_length; j++)
+      } // for (head++, b_idx++, rb_idx++; (b_idx < data_length) && (rb_idx < rbuff_length); head++, rb_idx++, b_idx++)
 
       if (match == 1) {
-        *sub_buffer_pos = head;
-        return 0;
-//        break; // for (; i < rbuff_length ;)
+        return 0; // for (head++, b_idx++, rb_idx++; (b_idx < data_length) && (rb_idx < rbuff_length); head++, rb_idx++, b_idx++)
       }
 
-    } // if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[i])
+    } // (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx])
 
-  } // for (; i < data_length ;)
+  } // for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head; rb_idx < rbuff_length ; head++, rb_idx++)
+
   *sub_buffer_pos = -1;
   return 0;
 }
