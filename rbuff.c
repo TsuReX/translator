@@ -166,7 +166,7 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
   }
 
 
-  uint32_t head = rbuff->head + head_pos;
+  uint32_t head = head_pos;
   uint32_t b_idx = 0;
   for (; (head != tail_pos) && (b_idx < *data_length); b_idx++, head++) {
     dst_buffer[b_idx] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
@@ -174,7 +174,7 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
   if (b_idx < *data_length) {
     dst_buffer[b_idx] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
   }
-  *data_length = b_idx;
+  *data_length = b_idx + 1;
   return 0;
 }
 
@@ -209,7 +209,7 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_
 
   if (rbuff_offset > rbuff_length)
     return -6;
-
+  // TODO Realize again rbuff_offset meaning and implement correct usage
   uint32_t match = 0;
   for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head + rbuff_offset; rb_idx < rbuff_length ; head++, rb_idx++) {
 //    printf("bytes: %d, 0x%02X, 0x%02X\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
@@ -325,9 +325,10 @@ void debug_print_rbuff(const struct rbuff_t * rbuff) {
   }
   printf("\n");
 
-  printf("Data from 0 to RBUFF_SIZE: ");
+/*  printf("Data from 0 to RBUFF_SIZE: ");
   for (uint32_t i = 0; i < RBUFF_SIZE; i++) {
     printf("0x%02X ", rbuff->ring_buffer[i]);
   }
   printf("\n");
+*/
 }

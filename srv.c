@@ -246,75 +246,73 @@ void process_data(struct rbuff_t * rbuff) {
   char cmd_buffer[16];
   fill_buffer((uint8_t *)cmd_buffer, sizeof(cmd_buffer), 0);
 
-//  debug_print_rbuff(rbuff);
-  int32_t cmd_head_pos = 0;
-  int32_t cmd_tail_pos = 0;
-//  printf("cmd_head: ");
-//  print_buffer(cmd_head, sizeof(cmd_head) - 1);
+    debug_print_rbuff(rbuff);
+//  while(1) {
+    int32_t cmd_head_pos = 0;
+    int32_t cmd_tail_pos = 0;
+    int32_t ret_val = 0;
 
-//  printf("cmd_tail: ");
-//  print_buffer(cmd_tail, sizeof(cmd_tail) - 1);
-
-  int32_t ret_val = 0;
-
-  // 1. Find the head of command
-  printf("\n%s(): stage 1\n", __func__);
-  ret_val = find_in_rbuff(rbuff, 0, cmd_head, 2, &cmd_head_pos);
-  if (ret_val != 0) {
-    printf("find_in_rbuff(): %d\n", ret_val);
-    printf("Ring buffer can't be processed\n");
-  }
-  printf("find_in_rbuff(): %d, cmd_head_pos: %d\n", ret_val, cmd_head_pos);
-
-  if (cmd_head_pos == -1) { // There is no command header in buffer, flush it at all (if size of buffer more than header size)
-    size_t length = 0;
-    length_rbuff(rbuff, &length);
-    if (length >= CMD_HEADER_LEN) {
-      flush_rbuff(rbuff, &length);
+    // 1. Find the head of command
+    printf("\n%s(): stage 1\n", __func__);
+    ret_val = find_in_rbuff(rbuff, 0, cmd_head, 2, &cmd_head_pos);
+    if (ret_val != 0) {
+      printf("find_in_rbuff(): %d\n", ret_val);
+      printf("Ring buffer can't be processed\n");
     }
-    return;
-  }
+    printf("find_in_rbuff(): %d, cmd_head_pos: %d\n", ret_val, cmd_head_pos);
 
-  // 2. Find the tail of command
-  printf("\n%s(): stage 2\n", __func__);
-  ret_val = find_in_rbuff(rbuff, cmd_head_pos + 2, cmd_tail, 1, &cmd_tail_pos);
-  if (ret_val != 0) {
-    printf("find_in_rbuff(): %d\n", ret_val);
-    printf("Ring buffer can't be processed\n");
-  }
-  printf("find_in_rbuff(): %d, cmd_tail_pos: %d\n", ret_val, cmd_tail_pos);
-
-  if (cmd_tail_pos == -1) { // There is no command tail in buffer, wait more
-    size_t length = 0;
-    length_rbuff(rbuff, &length);
-    if (length >= CMD_MAX_LEN) {
-      flush_rbuff(rbuff, &length);
+    if (cmd_head_pos == -1) { // There is no command header in buffer, flush it at all (if size of buffer more than header size)
+      size_t length = 0;
+      length_rbuff(rbuff, &length);
+      if (length >= CMD_HEADER_LEN) {
+        flush_rbuff(rbuff, &length);
+      }
+      return;
     }
-    return;
-  }
 
-  // 3. Copy data for cmd_head_pos up to cmd_tail_pos including it
-  printf("\n%s(): stage 3\n", __func__);
-  size_t cmd_length = 8;
-  uint32_t from = cmd_head_pos;
-  uint32_t to = cmd_tail_pos;
-  ret_val = copy_range_from_rbuff(rbuff, (uint8_t *)cmd_buffer, cmd_head_pos, cmd_tail_pos, &cmd_length);
-  if (ret_val != 0) {
-    printf("copy_range_from_rbuff(): %d\n", ret_val);
-    printf("Ring buffer can't be copied with extraction\n");
-  }
-  printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
+    // 2. Find the tail of command
+    printf("\n%s(): stage 2\n", __func__);
+    ret_val = find_in_rbuff(rbuff, 2, cmd_tail, 1, &cmd_tail_pos);
+    if (ret_val != 0) {
+      printf("find_in_rbuff(): %d\n", ret_val);
+      printf("Ring buffer can't be processed\n");
+    }
+    printf("find_in_rbuff(): %d, cmd_tail_pos: %d\n", ret_val, cmd_tail_pos);
 
-  // 4. Flush buffer from the head of buffer up to cmd_tail_pos including it
-  printf("\n%s(): stage 4\n", __func__);
-  size_t flush_size = cmd_head_pos + cmd_length;
-  ret_val = flush_rbuff(rbuff, &flush_size);
-  if (ret_val != 0) {
-    printf("flush_rbuff(): %d\n", ret_val);
-    printf("Ring buffer can't be partially flushed\n");
-  }
+    if (cmd_tail_pos == -1) { // There is no command tail in buffer, wait more
+      size_t length = 0;
+      length_rbuff(rbuff, &length);
+      if (length >= CMD_MAX_LEN) {
+        flush_rbuff(rbuff, &length);
+      }
+      return;
+    }
 
-  printf("cmd_buffer: %s\n", cmd_buffer);
+    // 3. Copy data for cmd_head_pos up to cmd_tail_pos including it
+    printf("\n%s(): stage 3\n", __func__);
+    size_t cmd_length = 8;
+    uint32_t from = cmd_head_pos;
+    uint32_t to = cmd_tail_pos;
+    ret_val = copy_range_from_rbuff(rbuff, (uint8_t *)cmd_buffer, cmd_head_pos, cmd_tail_pos, &cmd_length);
+    if (ret_val != 0) {
+      printf("copy_range_from_rbuff(): %d\n", ret_val);
+      printf("Ring buffer can't be copied with extraction\n");
+    }
+    printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
+
+    // 4. Flush buffer from the head of buffer up to cmd_tail_pos including it
+    printf("\n%s(): stage 4\n", __func__);
+    size_t flush_size = cmd_head_pos + cmd_length;
+    ret_val = flush_rbuff(rbuff, &flush_size);
+    if (ret_val != 0) {
+      printf("flush_rbuff(): %d\n", ret_val);
+      printf("Ring buffer can't be partially flushed\n");
+    }
+    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
+
+    printf("cmd_buffer: %s\n", cmd_buffer);
+    debug_print_rbuff(rbuff);
+//  }
 }
 
 int32_t main() {
