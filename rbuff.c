@@ -106,6 +106,78 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
   return 0;
 }
 
+int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint32_t head_pos, uint32_t tail_pos, size_t * data_length) {
+  if (rbuff == NULL)
+    return -1;
+
+  if (dst_buffer == NULL)
+    return -2;
+
+  if (data_length == NULL)
+    return -3;
+
+  size_t rbuff_length = 0;
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      rbuff_length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      rbuff_length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    rbuff_length = RBUFF_SIZE;
+  }
+
+  if (*data_length > rbuff_length) {
+    *data_length = rbuff_length;
+  }
+
+  if (rbuff->full == 0) {
+
+    if (rbuff->tail == rbuff->head) { // [_____T/H_____]
+      // Empty
+      *data_length = 0;
+      return 0;
+
+    } else  if (rbuff->tail > rbuff->head) { // [_____H*****T_____]
+
+      if ((head_pos < rbuff->head) || head_pos > rbuff->tail) { // [__h__H*****T_____] || [_____H*****T__h__]
+        return -7;
+      }
+
+      if ((tail_pos < rbuff->head) || tail_pos > rbuff->tail) { // [__t__H*****T_____] || [_____H*****T__t__]
+        return -8;
+      }
+
+    } else { // rbuff->tail < rbuff->head // [*****T_____H*****]
+
+      if (head_pos < rbuff->head) { // [*****T__h__H*****] || [**h**T_____H*****]
+        return -9;
+      }
+
+      if (tail_pos > rbuff->tail) { // [*****T_____H**t**] || [*****T__t__H*****]
+        return -10;
+      }
+    }
+
+  } else { // rbuff->full == 1 [*****T/H*****]
+    if ((head_pos < rbuff->head) || (tail_pos > rbuff->tail)) { // [**h**T/H*****] || [*****T/H**t**]
+      return -11;
+    }
+  }
+
+
+  uint32_t head = rbuff->head + head_pos;
+  uint32_t b_idx = 0;
+  for (; (head != tail_pos) && (b_idx < *data_length); b_idx++, head++) {
+    dst_buffer[b_idx] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
+  }
+  if (b_idx < *data_length) {
+    dst_buffer[b_idx] = rbuff->ring_buffer[head & (RBUFF_SIZE - 1)];
+  }
+  *data_length = b_idx;
+  return 0;
+}
+
 int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
   if (rbuff == NULL)
     return -1;
@@ -163,7 +235,7 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_
   return 0;
 }
 
-int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {  
+int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {
   if (rbuff == NULL)
     return -1;
 
@@ -192,6 +264,26 @@ int32_t flush_rbuff(struct rbuff_t *rbuff, size_t * flush_length) {
     rbuff->head = (rbuff->head + *flush_length) & (RBUFF_SIZE - 1);
   }
   rbuff->full = 0;
+
+  return 0;
+}
+
+int32_t length_rbuff(struct rbuff_t * rbuff, size_t * length) {
+  if (rbuff == NULL)
+    return -1;
+
+  if (length == NULL)
+    return -3;
+
+  if (rbuff->full == 0) {
+    if (rbuff->tail >= rbuff->head) {
+      *length = rbuff->tail - rbuff->head;
+    } else { // rbuff->tail < rbuff->head
+      *length = RBUFF_SIZE - (rbuff->head - rbuff->tail);
+    }
+  } else {
+    *length = RBUFF_SIZE;
+  }
 
   return 0;
 }

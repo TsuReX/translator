@@ -21,6 +21,11 @@ struct sigaction {
 int sigaction(int signum, const struct sigaction *_Nullable restrict act, struct sigaction *_Nullable restrict oldact);
 */
 
+#define CMD_HEADER "RL"
+#define CMD_TAIL "\n"
+#define CMD_HEADER_LEN 2 // "RL"
+#define CMD_MAX_LEN 8 // "RLATTBP\n
+
 uint32_t shared_value = 0;
 uint32_t exit_flag = 0;
 
@@ -173,7 +178,7 @@ void rbuff_test() {
   data_length0 = sizeof(buffer4);
   printf("buffer4: ");
   print_buffer(buffer4, sizeof(buffer4));
-  ret_val = find_in_rbuff(&rbuff, buffer4, data_length0, &sub_buffer_pos);
+  ret_val = find_in_rbuff(&rbuff, 0, buffer4, data_length0, &sub_buffer_pos);
   printf("find_in_rbuff(): %d, data_length: %ld, sub_buffer_pos %d\n", ret_val, data_length0, sub_buffer_pos);
 
   /* flush_rbuff()  */
@@ -236,19 +241,80 @@ void rbuff_test() {
 }
 
 void process_data(struct rbuff_t * rbuff) {
-  uint8_t cmd_head[] = "RL";
-  uint8_t cmd_tail[] = "\n";
+  uint8_t cmd_head[] = CMD_HEADER;
+  uint8_t cmd_tail[] = CMD_TAIL;
+  char cmd_buffer[16];
+  fill_buffer((uint8_t *)cmd_buffer, sizeof(cmd_buffer), 0);
 
-  debug_print_rbuff(rbuff);
+//  debug_print_rbuff(rbuff);
   int32_t cmd_head_pos = 0;
   int32_t cmd_tail_pos = 0;
+//  printf("cmd_head: ");
+//  print_buffer(cmd_head, sizeof(cmd_head) - 1);
 
-  int32_t ret_val = find_in_rbuff(rbuff, cmd_head, 2, &cmd_head_pos);
-  ret_val = find_in_rbuff(rbuff, cmd_tail, 1, &cmd_tail_pos);
+//  printf("cmd_tail: ");
+//  print_buffer(cmd_tail, sizeof(cmd_tail) - 1);
 
-  printf("cmd_head_pos: %d, cmd_tail_pos: %d\n", cmd_head_pos, cmd_tail_pos);
+  int32_t ret_val = 0;
 
+  // 1. Find the head of command
+  printf("\n%s(): stage 1\n", __func__);
+  ret_val = find_in_rbuff(rbuff, 0, cmd_head, 2, &cmd_head_pos);
+  if (ret_val != 0) {
+    printf("find_in_rbuff(): %d\n", ret_val);
+    printf("Ring buffer can't be processed\n");
+  }
+  printf("find_in_rbuff(): %d, cmd_head_pos: %d\n", ret_val, cmd_head_pos);
 
+  if (cmd_head_pos == -1) { // There is no command header in buffer, flush it at all (if size of buffer more than header size)
+    size_t length = 0;
+    length_rbuff(rbuff, &length);
+    if (length >= CMD_HEADER_LEN) {
+      flush_rbuff(rbuff, &length);
+    }
+    return;
+  }
+
+  // 2. Find the tail of command
+  printf("\n%s(): stage 2\n", __func__);
+  ret_val = find_in_rbuff(rbuff, cmd_head_pos + 2, cmd_tail, 1, &cmd_tail_pos);
+  if (ret_val != 0) {
+    printf("find_in_rbuff(): %d\n", ret_val);
+    printf("Ring buffer can't be processed\n");
+  }
+  printf("find_in_rbuff(): %d, cmd_tail_pos: %d\n", ret_val, cmd_tail_pos);
+
+  if (cmd_tail_pos == -1) { // There is no command tail in buffer, wait more
+    size_t length = 0;
+    length_rbuff(rbuff, &length);
+    if (length >= CMD_MAX_LEN) {
+      flush_rbuff(rbuff, &length);
+    }
+    return;
+  }
+
+  // 3. Copy data for cmd_head_pos up to cmd_tail_pos including it
+  printf("\n%s(): stage 3\n", __func__);
+  size_t cmd_length = 8;
+  uint32_t from = cmd_head_pos;
+  uint32_t to = cmd_tail_pos;
+  ret_val = copy_range_from_rbuff(rbuff, (uint8_t *)cmd_buffer, cmd_head_pos, cmd_tail_pos, &cmd_length);
+  if (ret_val != 0) {
+    printf("copy_range_from_rbuff(): %d\n", ret_val);
+    printf("Ring buffer can't be copied with extraction\n");
+  }
+  printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
+
+  // 4. Flush buffer from the head of buffer up to cmd_tail_pos including it
+  printf("\n%s(): stage 4\n", __func__);
+  size_t flush_size = cmd_head_pos + cmd_length;
+  ret_val = flush_rbuff(rbuff, &flush_size);
+  if (ret_val != 0) {
+    printf("flush_rbuff(): %d\n", ret_val);
+    printf("Ring buffer can't be partially flushed\n");
+  }
+
+  printf("cmd_buffer: %s\n", cmd_buffer);
 }
 
 int32_t main() {
@@ -298,7 +364,7 @@ int32_t main() {
       close(listen_socket);
       return -3;
   }
-  printf("Listening was started\n");
+  printf("\nListening was started\n");
 
   struct sockaddr_in client_addr;
   socklen_t client_addr_len;
@@ -361,7 +427,7 @@ int32_t main() {
         copy_to_rbuff(&rbuff, buffer, &data_length);
         process_data(&rbuff);
     } // Receiving loop
-    printf("Listening was started\n");
+    printf("\nListening was started\n");
   } // Accepting loop
 //  send();
 
