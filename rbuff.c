@@ -106,7 +106,7 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
   return 0;
 }
 
-int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
+int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
   if (rbuff == NULL)
     return -1;
 
@@ -135,12 +135,15 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
   if (data_length > rbuff_length)
     return -5;
 
+  if (rbuff_offset > rbuff_length)
+    return -6;
+
   uint32_t match = 0;
-  for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head; rb_idx < rbuff_length ; head++, rb_idx++) {
+  for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head + rbuff_offset; rb_idx < rbuff_length ; head++, rb_idx++) {
 //    printf("bytes: %d, 0x%02X, 0x%02X\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
     if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx]) {
       match = 1;
-      *sub_buffer_pos = head;
+      *sub_buffer_pos = head & (RBUFF_SIZE - 1);
       for (head++, b_idx++, rb_idx++; (b_idx < data_length) && (rb_idx < rbuff_length); head++, rb_idx++, b_idx++) {
 //        printf("bytes: %d, 0x%02X, 0x%02X\n", _head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
         if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] != sub_buffer[b_idx]) {
@@ -156,7 +159,6 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, const uint8_t * sub_buffer, size_t 
     } // (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx])
 
   } // for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head; rb_idx < rbuff_length ; head++, rb_idx++)
-
   *sub_buffer_pos = -1;
   return 0;
 }
