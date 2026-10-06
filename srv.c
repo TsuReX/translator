@@ -244,22 +244,23 @@ void process_data(struct rbuff_t * rbuff) {
   uint8_t cmd_head[] = CMD_HEADER;
   uint8_t cmd_tail[] = CMD_TAIL;
   char cmd_buffer[16];
-  fill_buffer((uint8_t *)cmd_buffer, sizeof(cmd_buffer), 0);
 
-    debug_print_rbuff(rbuff);
-//  while(1) {
+//  debug_print_rbuff(rbuff);
+  while(1) {
+    fill_buffer((uint8_t *)cmd_buffer, sizeof(cmd_buffer), 0);
     int32_t cmd_head_pos = 0;
     int32_t cmd_tail_pos = 0;
     int32_t ret_val = 0;
 
     // 1. Find the head of command
-    printf("\n%s(): stage 1\n", __func__);
+//    printf("\n%s(): stage 1\n", __func__);
     ret_val = find_in_rbuff(rbuff, 0, cmd_head, 2, &cmd_head_pos);
     if (ret_val != 0) {
       printf("find_in_rbuff(): %d\n", ret_val);
       printf("Ring buffer can't be processed\n");
+      return;
     }
-    printf("find_in_rbuff(): %d, cmd_head_pos: %d\n", ret_val, cmd_head_pos);
+//    printf("find_in_rbuff(): %d, cmd_head_pos: %d\n", ret_val, cmd_head_pos);
 
     if (cmd_head_pos == -1) { // There is no command header in buffer, flush it at all (if size of buffer more than header size)
       size_t length = 0;
@@ -271,13 +272,14 @@ void process_data(struct rbuff_t * rbuff) {
     }
 
     // 2. Find the tail of command
-    printf("\n%s(): stage 2\n", __func__);
-    ret_val = find_in_rbuff(rbuff, 2, cmd_tail, 1, &cmd_tail_pos);
+//    printf("\n%s(): stage 2\n", __func__);
+    ret_val = find_in_rbuff(rbuff, cmd_head_pos + 2, cmd_tail, 1, &cmd_tail_pos);
     if (ret_val != 0) {
       printf("find_in_rbuff(): %d\n", ret_val);
       printf("Ring buffer can't be processed\n");
+      return;
     }
-    printf("find_in_rbuff(): %d, cmd_tail_pos: %d\n", ret_val, cmd_tail_pos);
+//    printf("find_in_rbuff(): %d, cmd_tail_pos: %d\n", ret_val, cmd_tail_pos);
 
     if (cmd_tail_pos == -1) { // There is no command tail in buffer, wait more
       size_t length = 0;
@@ -289,30 +291,33 @@ void process_data(struct rbuff_t * rbuff) {
     }
 
     // 3. Copy data for cmd_head_pos up to cmd_tail_pos including it
-    printf("\n%s(): stage 3\n", __func__);
+//    printf("\n%s(): stage 3\n", __func__);
     size_t cmd_length = 8;
-    uint32_t from = cmd_head_pos;
-    uint32_t to = cmd_tail_pos;
+//    uint32_t from = cmd_head_pos;
+//    uint32_t to = cmd_tail_pos;
     ret_val = copy_range_from_rbuff(rbuff, (uint8_t *)cmd_buffer, cmd_head_pos, cmd_tail_pos, &cmd_length);
     if (ret_val != 0) {
       printf("copy_range_from_rbuff(): %d\n", ret_val);
       printf("Ring buffer can't be copied with extraction\n");
+      return;
     }
-    printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
+//    printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
 
     // 4. Flush buffer from the head of buffer up to cmd_tail_pos including it
-    printf("\n%s(): stage 4\n", __func__);
+//    printf("\n%s(): stage 4\n", __func__);
     size_t flush_size = cmd_head_pos + cmd_length;
     ret_val = flush_rbuff(rbuff, &flush_size);
     if (ret_val != 0) {
       printf("flush_rbuff(): %d\n", ret_val);
       printf("Ring buffer can't be partially flushed\n");
+      return;
     }
-    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
+//    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
 
     printf("cmd_buffer: %s\n", cmd_buffer);
-    debug_print_rbuff(rbuff);
-//  }
+//    debug_print_rbuff(rbuff);
+//    sleep(2);
+  }
 }
 
 int32_t main() {
@@ -403,27 +408,31 @@ int32_t main() {
         }
 
         ssize_t recv_val = recv(communication_socket, buffer, len, MSG_DONTWAIT);
-        if (recv_val == -1) {
-            if (errno == EAGAIN) {
+        if (recv_val == -1) { // Receiving finished with error
+            if (errno == EAGAIN) { // No data to receive during non blocking receiving
 //                printf("Data hasn't received\n");
                 sleep(1);
                 continue;
+
+            } else { // Receiving finished with error
+              perror("Receiving can't be carried out\n");
+              close(listen_socket);
+              close(communication_socket);
+              return -5;
             }
-            perror("Receiving can't be carried out\n");
-            close(listen_socket);
-            close(communication_socket);
-            return -5;
-        }
-        if (recv_val == 0) {
+
+        } else if (recv_val == 0) { // Receiving can't be done due to closed connection
             printf("Connection was closed\n");
             sleep(1);
-     //       continue;
             break; // Start listening again
+
+        } else { // recv_val > 0 // Receiving finished successfully
+          // Data processing
+          size_t data_length = recv_val;
+          copy_to_rbuff(&rbuff, buffer, &data_length);
+          printf("Data received\n");
+          process_data(&rbuff);
         }
-        // Data processing
-        size_t data_length = recv_val;
-        copy_to_rbuff(&rbuff, buffer, &data_length);
-        process_data(&rbuff);
     } // Receiving loop
     printf("\nListening was started\n");
   } // Accepting loop

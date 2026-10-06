@@ -21,10 +21,11 @@ struct rbuff_t {
 void init_rbuff(struct rbuff_t * rbuff);
 int32_t copy_to_rbuff(struct rbuff_t * rbuff, const uint8_t * src_buffer, size_t *data_length);
 int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *data_length, uint32_t remove);
+
 int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint32_t head_pos, uint32_t tail_pos, size_t * data_length);
-// TODO: Implement uint32_t offset argument to use function for iterative search
 int32_t find_in_rbuff(struct rbuff_t * rbuff, uint32_t rbuff_offset, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos);
 int32_t flush_rbuff(struct rbuff_t * rbuff, size_t * flush_length);
+
 int32_t length_rbuff(struct rbuff_t * rbuff, size_t * length);
 void debug_print_rbuff(const struct rbuff_t * rbuff);
 #endif // _RBUFF_H_

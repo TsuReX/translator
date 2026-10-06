@@ -107,6 +107,11 @@ int32_t copy_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, size_t *da
 }
 
 int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint32_t head_pos, uint32_t tail_pos, size_t * data_length) {
+  // Variables head_pos and tail_pos are relative not absolute
+  // Absolute elements' address are calculated in the following way
+  // sub_array_head = rbuff->head + head_pos and
+  // sub_array_tail = rbuff->head + tail_pos
+
   if (rbuff == NULL)
     return -1;
 
@@ -130,6 +135,9 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
   if (*data_length > rbuff_length) {
     *data_length = rbuff_length;
   }
+
+  head_pos += rbuff->head;
+  tail_pos += rbuff->head;
 
   if (rbuff->full == 0) {
 
@@ -179,6 +187,9 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
 }
 
 int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_t * sub_buffer, size_t data_length, int32_t * sub_buffer_pos) {
+  // Variable rbuff_offset is relative not absolute
+  // Absolute element's address is calculated in the following way
+  // array_head = rbuff->head + rbuff_offset and
   if (rbuff == NULL)
     return -1;
 
@@ -210,15 +221,17 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_
   if (rbuff_offset > rbuff_length)
     return -6;
   // TODO Realize again rbuff_offset meaning and implement correct usage
+//  rbuff_offset += rbuff->head;
   uint32_t match = 0;
-  for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head + rbuff_offset; rb_idx < rbuff_length ; head++, rb_idx++) {
+  for (uint32_t rb_idx = 0, b_idx = 0, head = 0; rb_idx < rbuff_length ; head++, rb_idx++) {
 //    printf("bytes: %d, 0x%02X, 0x%02X\n", head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
-    if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx]) {
+    if (rbuff->ring_buffer[(head + rbuff->head + rbuff_offset ) & (RBUFF_SIZE - 1)] == sub_buffer[b_idx]) {
       match = 1;
-      *sub_buffer_pos = head & (RBUFF_SIZE - 1);
+//      *sub_buffer_pos = head & (RBUFF_SIZE - 1);
+      *sub_buffer_pos = head + rbuff_offset; // Don't wrap around head because it's value is real distance from rbuff->head
       for (head++, b_idx++, rb_idx++; (b_idx < data_length) && (rb_idx < rbuff_length); head++, rb_idx++, b_idx++) {
 //        printf("bytes: %d, 0x%02X, 0x%02X\n", _head, rbuff->ring_buffer[head & (RBUFF_SIZE - 1)], sub_buffer[b_idx]);
-        if (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] != sub_buffer[b_idx]) {
+        if (rbuff->ring_buffer[(head + rbuff->head + rbuff_offset) & (RBUFF_SIZE - 1)] != sub_buffer[b_idx]) {
           match = 0;
           break;
         }
@@ -230,7 +243,7 @@ int32_t find_in_rbuff(struct rbuff_t *rbuff, uint32_t rbuff_offset, const uint8_
 
     } // (rbuff->ring_buffer[head & (RBUFF_SIZE - 1)] == sub_buffer[b_idx])
 
-  } // for (uint32_t rb_idx = 0, b_idx = 0, head = rbuff->head; rb_idx < rbuff_length ; head++, rb_idx++)
+  } // for (uint32_t rb_idx = 0, b_idx = 0, head = 0; rb_idx < rbuff_length ; head++, rb_idx++)
   *sub_buffer_pos = -1;
   return 0;
 }
