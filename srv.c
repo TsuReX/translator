@@ -30,6 +30,8 @@ int sigaction(int signum, const struct sigaction *_Nullable restrict act, struct
 
 uint32_t shared_value = 0;
 uint32_t exit_flag = 0;
+int32_t tty_fd = -1;
+
 
 static void srv_signal_handle(int32_t sig_num) {
 
@@ -242,6 +244,19 @@ void rbuff_test() {
   debug_print_rbuff(&rbuff);
 }
 
+int32_t process_cmd(const char * cmd, int32_t tty_fd) {
+  if (cmd == NULL)
+    return -1;
+  uint8_t answer[16];
+  memset(answer, 0x0, sizeof(answer));
+  printf("Process command: %s\n", cmd);
+  write(tty_fd, cmd, strlen(cmd));
+  sleep(1);
+  read(tty_fd, answer, strlen(cmd));
+  printf("Answer is: %s\n", answer);
+  return 0;
+}
+
 void process_data(struct rbuff_t * rbuff) {
   uint8_t cmd_head[] = CMD_HEADER;
   uint8_t cmd_tail[] = CMD_TAIL;
@@ -316,10 +331,16 @@ void process_data(struct rbuff_t * rbuff) {
     }
 //    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
 
-    printf("cmd_buffer: %s\n", cmd_buffer);
+//    printf("cmd_buffer: %s\n", cmd_buffer);
+    process_cmd(cmd_buffer, tty_fd);
 //    debug_print_rbuff(rbuff);
 //    sleep(2);
   }
+}
+
+
+void close_tty(int32_t tty_fd) {
+  close(tty_fd);
 }
 
 int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
@@ -337,6 +358,7 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
   ret_val = tcgetattr(*tty_fd, &tty_options);
   if (ret_val == -1) {
     perror("Unable to get TTY attributes");
+    close(*tty_fd);
     return -2;
   }
 
@@ -344,12 +366,14 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
   ret_val = cfsetispeed(&tty_options, B115200);
   if (ret_val == -1) {
     perror("Unable to set TTY receiving baudrate");
+    close(*tty_fd);
     return -2;
   }
 
   ret_val = cfsetospeed(&tty_options, B115200);
   if (ret_val == -1) {
     perror("Unable to set TTY transmitting baudrate");
+    close(*tty_fd);
     return -3;
   }
 
@@ -385,6 +409,7 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
   ret_val = tcsetattr(*tty_fd, TCSANOW, &tty_options);
   if (ret_val == -1) {
     perror("Unable to set TTY attributes");
+    close(*tty_fd);
     return -4;
   }
   printf("TTY %s was successfully configured\n", tty_path);
@@ -397,7 +422,6 @@ int32_t main() {
 //  return 0;
 
   int ret_val = 0;
-  int32_t tty_fd = -1;
   char * tty_path = "/dev/ttyUSB0";
   ret_val = open_tty(tty_path, &tty_fd);
   if (ret_val < 0) {
@@ -522,6 +546,6 @@ int32_t main() {
 
   close(communication_socket);
   close(listen_socket);
-
+  close_tty(tty_fd);
   return 0;
 }
