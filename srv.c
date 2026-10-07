@@ -346,6 +346,10 @@ int32_t main() {
   printf("Socket %d created\n", listen_socket);
   int ret_val = 0;
 
+  int32_t option_value = 1;
+  // Set socket options
+  setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value));
+
   struct sockaddr_in listen_socket_addr;
   listen_socket_addr.sin_family = AF_INET;
   listen_socket_addr.sin_port = htons(10002);
