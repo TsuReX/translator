@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <termios.h>
 
 #include "rbuff.h"
 /*
@@ -320,10 +322,87 @@ void process_data(struct rbuff_t * rbuff) {
   }
 }
 
+int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
+
+  int ret_val = open(tty_path, O_RDWR | O_NOCTTY | O_NDELAY);
+  if (ret_val == -1) {
+    printf("Unable to open TTY %s: %s\n", tty_path, strerror(errno));
+//    perror("Unable to open TTY");
+    return -1;
+  }
+  *tty_fd = ret_val;
+  printf("TTY %s was successfully opened\n", tty_path);
+
+  struct termios tty_options;
+  ret_val = tcgetattr(*tty_fd, &tty_options);
+  if (ret_val == -1) {
+    perror("Unable to get TTY attributes");
+    return -2;
+  }
+
+  // Set Baud Rate to 115200
+  ret_val = cfsetispeed(&tty_options, B115200);
+  if (ret_val == -1) {
+    perror("Unable to set TTY receiving baudrate");
+    return -2;
+  }
+
+  ret_val = cfsetospeed(&tty_options, B115200);
+  if (ret_val == -1) {
+    perror("Unable to set TTY transmitting baudrate");
+    return -3;
+  }
+
+  // Enable the receiver and set local mode
+  tty_options.c_cflag |= (CLOCAL | CREAD);
+
+  // Mask the character size bits and set 8 data bits
+  tty_options.c_cflag &= ~CSIZE;
+  tty_options.c_cflag |= CS8;
+
+  // Set No Parity (8N1)
+  tty_options.c_cflag &= ~PARENB;
+  tty_options.c_iflag &= ~(INPCK | ISTRIP);
+
+  // Set 1 Stop Bit (8N1)
+  tty_options.c_cflag &= ~CSTOPB;
+
+  // Disable Hardware Flow Control (RTS/CTS)
+  tty_options.c_cflag &= ~CRTSCTS;
+
+  // Disable Software Flow Control (XON/XOFF)
+  tty_options.c_iflag &= ~(IXON | IXOFF | IXANY);
+
+  // Set Raw Input/Output Mode (Disable canonical mode, echoing, etc.)
+  tty_options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+  tty_options.c_oflag &= ~OPOST;
+
+  // Set Timeout Controls
+  tty_options.c_cc[VMIN]  = 1;  // Read blocks until at least 1 character is received
+  tty_options.c_cc[VTIME] = 0;  // No timeout
+
+  // Apply configuration immediately
+  ret_val = tcsetattr(*tty_fd, TCSANOW, &tty_options);
+  if (ret_val == -1) {
+    perror("Unable to set TTY attributes");
+    return -4;
+  }
+  printf("TTY %s was successfully configured\n", tty_path);
+
+  return 0;
+}
+
 int32_t main() {
 //  rbuff_test();
 //  return 0;
 
+  int ret_val = 0;
+  int32_t tty_fd = -1;
+  char * tty_path = "/dev/ttyUSB0";
+  ret_val = open_tty(tty_path, &tty_fd);
+  if (ret_val < 0) {
+    return -8;
+  }
   if (shared_value == 1) {
     printf("Dich hapened!!!\n");
     exit(-8);
@@ -344,7 +423,6 @@ int32_t main() {
       return -1;
   }
   printf("Socket %d created\n", listen_socket);
-  int ret_val = 0;
 
   int32_t option_value = 1;
   // Set socket options
