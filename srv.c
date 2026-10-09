@@ -244,7 +244,7 @@ void rbuff_test() {
   debug_print_rbuff(&rbuff);
 }
 
-int32_t process_cmd(const char * cmd, int32_t tty_fd) {
+int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_socket) {
   if (cmd == NULL)
     return -1;
   uint8_t answer[16];
@@ -254,10 +254,11 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd) {
   sleep(1);
   read(tty_fd, answer, strlen(cmd));
   printf("Answer is: %s\n", answer);
+  send(communication_socket, cmd, strlen(cmd), 0);
   return 0;
 }
 
-void process_data(struct rbuff_t * rbuff) {
+void process_data(struct rbuff_t * rbuff, int32_t communication_socket) {
   uint8_t cmd_head[] = CMD_HEADER;
   uint8_t cmd_tail[] = CMD_TAIL;
   char cmd_buffer[16];
@@ -332,7 +333,7 @@ void process_data(struct rbuff_t * rbuff) {
 //    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
 
 //    printf("cmd_buffer: %s\n", cmd_buffer);
-    process_cmd(cmd_buffer, tty_fd);
+    process_cmd(cmd_buffer, tty_fd, communication_socket);
 //    debug_print_rbuff(rbuff);
 //    sleep(2);
   }
@@ -417,12 +418,13 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
   return 0;
 }
 
-int32_t main() {
+int32_t main(int argc, char * argv[]) {
 //  rbuff_test();
 //  return 0;
 
   int ret_val = 0;
-  char * tty_path = "/dev/ttyUSB0";
+  //char * tty_path = "/dev/ttyACM0";
+  char * tty_path = argv[1];
   ret_val = open_tty(tty_path, &tty_fd);
   if (ret_val < 0) {
     return -8;
@@ -537,7 +539,7 @@ int32_t main() {
           size_t data_length = recv_val;
           copy_to_rbuff(&rbuff, buffer, &data_length);
           printf("Data received\n");
-          process_data(&rbuff);
+          process_data(&rbuff, communication_socket);
         }
     } // Receiving loop
     printf("\nListening was started\n");
