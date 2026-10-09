@@ -9,6 +9,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <time.h>
 
 #include "rbuff.h"
 /*
@@ -248,13 +249,15 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
   if (cmd == NULL)
     return -1;
   uint8_t answer[16];
+  struct timespec duration = {.tv_sec = 0, .tv_nsec = 10000000};
   memset(answer, 0x0, sizeof(answer));
   printf("Process command: %s\n", cmd);
-  write(tty_fd, cmd, strlen(cmd));
-  sleep(1);
-  read(tty_fd, answer, strlen(cmd));
+//  write(tty_fd, cmd, strlen(cmd));
+  write(tty_fd, cmd, sizeof(answer));
+  nanosleep(&duration, NULL);
+  read(tty_fd, answer, sizeof(answer)); // TODO Determine the size of answewr to be received
   printf("Answer is: %s\n", answer);
-  send(communication_socket, cmd, strlen(cmd), 0);
+  send(communication_socket, cmd, strlen((char *)answer), 0);
   return 0;
 }
 
