@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "rbuff.h"
 /*
@@ -32,6 +33,8 @@ int sigaction(int signum, const struct sigaction *_Nullable restrict act, struct
 uint32_t shared_value = 0;
 uint32_t exit_flag = 0;
 int32_t tty_fd = -1;
+char * rlon_path = NULL;
+char * rloff_path = NULL;
 
 
 static void srv_signal_handle(int32_t sig_num) {
@@ -252,12 +255,29 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
   struct timespec duration = {.tv_sec = 0, .tv_nsec = 10000000};
   memset(answer, 0x0, sizeof(answer));
   printf("Process command: %s\n", cmd);
+  int32_t ret_val = 0;
+  if (strstr(cmd, "RLON") != NULL) {
+    ret_val = system(rlon_path);
+    if (ret_val == -1) {
+      printf("rlon script %s execution failure: %s\n", rlon_path, strerror(errno));
+    }
+  }
+  if (strstr(cmd, "RLOFF") != NULL) {
+    ret_val = system(rloff_path);
+    if (ret_val == -1) {
+      printf("rloff script %s execution failure: %s\n", rloff_path, strerror(errno));
+    }
+  }
 //  write(tty_fd, cmd, strlen(cmd));
   write(tty_fd, cmd, sizeof(answer));
   nanosleep(&duration, NULL);
-  read(tty_fd, answer, sizeof(answer)); // TODO Determine the size of answewr to be received
+  ret_val = read(tty_fd, answer, sizeof(answer)); // TODO Determine the size of answewr to be received
+  if (ret_val == -1) {
+    perror("Reading data from serial interface failed");
+    return -1;
+  }
   printf("Answer is: %s\n", answer);
-  send(communication_socket, cmd, strlen((char *)answer), 0);
+  send(communication_socket, cmd, ret_val, 0);
   return 0;
 }
 
@@ -424,10 +444,15 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
 int32_t main(int argc, char * argv[]) {
 //  rbuff_test();
 //  return 0;
-
+  if (argc < 4) {
+    printf("Invalid argument count\n");
+    return -9;
+  }
   int ret_val = 0;
   //char * tty_path = "/dev/ttyACM0";
   char * tty_path = argv[1];
+  rlon_path = argv[2];
+  rloff_path = argv[3];
   ret_val = open_tty(tty_path, &tty_fd);
   if (ret_val < 0) {
     return -8;

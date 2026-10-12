@@ -1,0 +1,11 @@
+[Unit]
+Description=Translator
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/user/workspace/translator/translator.elf /dev/ttyFIQ0 /home/user/workspace/translator/rlon.sh /home/user/workspace/translator/rloff.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
