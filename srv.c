@@ -269,15 +269,26 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
     }
   }
 //  write(tty_fd, cmd, strlen(cmd));
+  tcflush(tty_fd, TCIOFLUSH);
   write(tty_fd, cmd, sizeof(answer));
   nanosleep(&duration, NULL);
-  ret_val = read(tty_fd, answer, sizeof(answer)); // TODO Determine the size of answewr to be received
-  if (ret_val == -1) {
-    perror("Reading data from serial interface failed");
-    return -1;
+  int32_t read_count = 0;
+  for (;read_count < sizeof(answer);) {
+    ret_val = read(tty_fd, answer + read_count, sizeof(answer) - read_count); // TODO Determine the size of answewr to be received
+    if (ret_val == -1 && errno != EAGAIN) {
+     perror("Reading data from serial interface failed");
+     return -1;
+    }
+    if (ret_val > 0) {
+      read_count += ret_val;
+      printf("Debug answer: %s\n", answer);
+    }
+    if (strstr((char*)answer, "\n") != NULL) {
+      break;
+    }
   }
   printf("Answer is: %s\n", answer);
-  send(communication_socket, cmd, ret_val, 0);
+  send(communication_socket, answer, strlen((char *)answer), 0);
   return 0;
 }
 
