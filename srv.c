@@ -33,8 +33,8 @@ int sigaction(int signum, const struct sigaction *_Nullable restrict act, struct
 uint32_t shared_value = 0;
 uint32_t exit_flag = 0;
 int32_t tty_fd = -1;
-char * rlon_path = NULL;
-char * rloff_path = NULL;
+char * rlon_cmd = NULL;
+char * rloff_cmd = NULL;
 
 
 static void srv_signal_handle(int32_t sig_num) {
@@ -247,7 +247,7 @@ void rbuff_test() {
   printf("flush_rbuff(): %d, data_length0 before: %ld, data_length0 after: %ld\n", ret_val, data_length0_before, data_length0);
   debug_print_rbuff(&rbuff);
 }
-
+uint32_t rlfb = 2500;
 int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_socket) {
   if (cmd == NULL)
     return -1;
@@ -256,16 +256,55 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
   memset(answer, 0x0, sizeof(answer));
   printf("Process command: %s\n", cmd);
   int32_t ret_val = 0;
+  if (strstr(cmd, "RLF") != NULL) {
+    if ((*(cmd + 3) >= 0x30) && (*(cmd + 3) <= 0x33) && (*(cmd + 4) >= 0x30) && (*(cmd + 4) <= 0x37)) { // Check command correctness
+      uint8_t t = *(cmd + 4) - 0x30;
+      switch(t){
+        default:
+        case 0:
+          rlfb = 2500;
+          break;
+        case 1:
+          rlfb = 5000;
+          break;
+        case 2:
+          rlfb = 7500;
+          break;
+        case 3:
+          rlfb = 15000;
+          break;
+        case 4:
+          rlfb = 25000;
+          break;
+        case 5:
+          rlfb = 33250;
+          break;
+        case 6:
+          rlfb = 40000;
+          break;
+        case 7:
+          rlfb = 50000;
+          break;
+      };
+    }
+ }
   if (strstr(cmd, "RLON") != NULL) {
-    ret_val = system(rlon_path);
+    char rlon_cmd_app[512];
+    char rlfb_str[16];
+    sprintf(rlfb_str, "%d", rlfb);
+    memset(rlon_cmd_app, 0x0, sizeof(rlon_cmd_app));
+    strcpy(rlon_cmd_app, rlon_cmd);
+    strcat(rlon_cmd_app, "  ");
+    strcat(rlon_cmd_app, rlfb_str);
+    ret_val = system(rlon_cmd_app);
     if (ret_val == -1) {
-      printf("rlon script %s execution failure: %s\n", rlon_path, strerror(errno));
+      printf("rlon script %s execution failure: %s\n", rlon_cmd, strerror(errno));
     }
   }
   if (strstr(cmd, "RLOFF") != NULL) {
-    ret_val = system(rloff_path);
+    ret_val = system(rloff_cmd);
     if (ret_val == -1) {
-      printf("rloff script %s execution failure: %s\n", rloff_path, strerror(errno));
+      printf("rloff script %s execution failure: %s\n", rloff_cmd, strerror(errno));
     }
   }
 //  write(tty_fd, cmd, strlen(cmd));
@@ -350,7 +389,9 @@ void process_data(struct rbuff_t * rbuff, int32_t communication_socket) {
     ret_val = copy_range_from_rbuff(rbuff, (uint8_t *)cmd_buffer, cmd_head_pos, cmd_tail_pos, &cmd_length);
     if (ret_val != 0) {
       printf("copy_range_from_rbuff(): %d\n", ret_val);
-      printf("Ring buffer can't be copied with extraction\n");
+      printf("Ring buffer can't be copied\n");
+      printf("cmd_head_pos: %d, cmd_tail_pos: %d, cmd_length: %ld\n", cmd_head_pos, cmd_tail_pos, cmd_length);
+      debug_print_rbuff(rbuff);
       return;
     }
 //    printf("copy_range_from_rbuff(): %d, from: %d, to: %d, cmd_length: %ld\n", ret_val, from, to, cmd_length);
@@ -462,8 +503,8 @@ int32_t main(int argc, char * argv[]) {
   int ret_val = 0;
   //char * tty_path = "/dev/ttyACM0";
   char * tty_path = argv[1];
-  rlon_path = argv[2];
-  rloff_path = argv[3];
+  rlon_cmd = argv[2];
+  rloff_cmd = argv[3];
   ret_val = open_tty(tty_path, &tty_fd);
   if (ret_val < 0) {
     return -8;
