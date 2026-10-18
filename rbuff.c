@@ -138,6 +138,8 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
 
   head_pos += rbuff->head;
   tail_pos += rbuff->head;
+  head_pos = head_pos & (RBUFF_SIZE - 1);
+  tail_pos = tail_pos & (RBUFF_SIZE - 1);
 
   if (rbuff->full == 0) {
 
@@ -158,11 +160,11 @@ int32_t copy_range_from_rbuff(struct rbuff_t * rbuff, uint8_t * dst_buffer, uint
 
     } else { // rbuff->tail < rbuff->head // [*****T_____H*****]
 
-      if (head_pos < rbuff->head) { // [*****T__h__H*****] || [**h**T_____H*****]
+      if ((head_pos < rbuff->head) & (head_pos > rbuff->tail)) { // [*****T__h__H*****]
         return -9;
       }
 
-      if (tail_pos > rbuff->tail) { // [*****T_____H**t**] || [*****T__t__H*****]
+      if ((tail_pos > rbuff->tail) & (tail_pos < rbuff->head)) { // [*****T__t__H*****]
         return -10;
       }
     }
