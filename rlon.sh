@@ -1,3 +1,4 @@
 #!/bin/sh
 
-echo "RLON " `date` $1>> /home/user/workspace/translator/translator.log
+echo "RLON $1" `date`>> /home/user/workspace/translator/translator.log
+systemctl start man_adc@"$1".service

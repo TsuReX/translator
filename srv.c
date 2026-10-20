@@ -268,7 +268,7 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
           rlfb = 5000;
           break;
         case 2:
-          rlfb = 7500;
+          rlfb = 10000;
           break;
         case 3:
           rlfb = 15000;
@@ -298,13 +298,20 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
     strcat(rlon_cmd_app, rlfb_str);
     ret_val = system(rlon_cmd_app);
     if (ret_val == -1) {
-      printf("rlon script %s execution failure: %s\n", rlon_cmd, strerror(errno));
+      printf("rlon script %s execution failure: %s\n", rlon_cmd_app, strerror(errno));
     }
   }
   if (strstr(cmd, "RLOFF") != NULL) {
-    ret_val = system(rloff_cmd);
+    char rloff_cmd_app[512];
+    char rlfb_str[16];
+    sprintf(rlfb_str, "%d", rlfb);
+    memset(rloff_cmd_app, 0x0, sizeof(rloff_cmd_app));
+    strcpy(rloff_cmd_app, rloff_cmd);
+    strcat(rloff_cmd_app, "  ");
+    strcat(rloff_cmd_app, rlfb_str);
+    ret_val = system(rloff_cmd_app);
     if (ret_val == -1) {
-      printf("rloff script %s execution failure: %s\n", rloff_cmd, strerror(errno));
+      printf("rloff script %s execution failure: %s\n", rloff_cmd_app, strerror(errno));
     }
   }
 //  write(tty_fd, cmd, strlen(cmd));
