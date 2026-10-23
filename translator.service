@@ -1,11 +1,14 @@
 [Unit]
 Description=Translator
 After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=13
 
 [Service]
 Type=simple
 ExecStart=/home/user/workspace/translator/translator.elf /dev/ttyUSB3 /home/user/workspace/translator/rlon.sh /home/user/workspace/translator/rloff.sh
 Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

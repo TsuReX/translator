@@ -262,19 +262,19 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
       switch(t){
         default:
         case 0:
-          rlfb = 2500;
+          rlfb = 1000;
           break;
         case 1:
-          rlfb = 5000;
+          rlfb = 2000;
           break;
         case 2:
-          rlfb = 10000;
+          rlfb = 4000;
           break;
         case 3:
-          rlfb = 15000;
+          rlfb = 8000;
           break;
         case 4:
-          rlfb = 25000;
+          rlfb = 16000;
           break;
         case 5:
           rlfb = 33250;
