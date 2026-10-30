@@ -11,7 +11,7 @@
 #include <termios.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include <arpa/inet.h>
 #include "rbuff.h"
 /*
 struct sigaction {
@@ -248,7 +248,7 @@ void rbuff_test() {
   debug_print_rbuff(&rbuff);
 }
 uint32_t rlfb = 2500;
-int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_socket) {
+int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_socket, const struct sockaddr_in *src_addr) {
   if (cmd == NULL)
     return -1;
   uint8_t answer[16];
@@ -319,7 +319,7 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
   write(tty_fd, cmd, sizeof(answer));
   nanosleep(&duration, NULL);
   int32_t read_count = 0;
-  for (;read_count < sizeof(answer);) {
+/*  for (;read_count < sizeof(answer);) {
     ret_val = read(tty_fd, answer + read_count, sizeof(answer) - read_count); // TODO Determine the size of answewr to be received
     if (ret_val == -1 && errno != EAGAIN) {
      perror("Reading data from serial interface failed");
@@ -332,13 +332,14 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
     if (strstr((char*)answer, "\n") != NULL) {
       break;
     }
-  }
+  }*/
+  strcpy((char *)answer, cmd);
   printf("Answer is: %s\n", answer);
-  send(communication_socket, answer, strlen((char *)answer), 0);
+  sendto(communication_socket, answer, strlen((char *)answer), 0, (const struct sockaddr *)src_addr, sizeof(struct sockaddr_in));
   return 0;
 }
 
-void process_data(struct rbuff_t * rbuff, int32_t communication_socket) {
+void process_data(struct rbuff_t * rbuff, int32_t communication_socket, const struct sockaddr_in * src_addr) {
   uint8_t cmd_head[] = CMD_HEADER;
   uint8_t cmd_tail[] = CMD_TAIL;
   char cmd_buffer[16];
@@ -415,7 +416,7 @@ void process_data(struct rbuff_t * rbuff, int32_t communication_socket) {
 //    printf("flush_rbuff(): %d, flush_size: %ld\n", ret_val, flush_size);
 
 //    printf("cmd_buffer: %s\n", cmd_buffer);
-    process_cmd(cmd_buffer, tty_fd, communication_socket);
+    process_cmd(cmd_buffer, tty_fd, communication_socket, src_addr);
 //    debug_print_rbuff(rbuff);
 //    sleep(2);
   }
@@ -500,7 +501,152 @@ int32_t open_tty(const char * tty_path, int32_t * tty_fd) {
   return 0;
 }
 
+
 int32_t main(int argc, char * argv[]) {
+//  rbuff_test();
+//  return 0;
+  if (argc < 4) {
+    printf("Invalid argument count\n");
+    return -9;
+  }
+  int ret_val = 0;
+  //char * tty_path = "/dev/ttyACM0";
+  char * tty_path = argv[1];
+  rlon_cmd = argv[2];
+  rloff_cmd = argv[3];
+  ret_val = open_tty(tty_path, &tty_fd);
+  if (ret_val < 0) {
+    return -8;
+  }
+  if (shared_value == 1) {
+    printf("Dich hapened!!!\n");
+    exit(-8);
+  }
+  printf("Shared value: %d \n", shared_value++);
+  struct sigaction act;
+	act.sa_handler = srv_signal_handle;
+	if (sigaction(SIGINT, &act, NULL) == -1) {
+		perror("Error of signal handlers setting up.");
+		return -6;
+	}
+  printf("Program interrupt handler registered\n");
+  // SO_KEEPALIVE -> SIGPIPE
+  // SO_REUSEADDR
+  int listen_socket = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+  if (listen_socket == -1) {
+      perror("Socket can't be created");
+      return -1;
+  }
+  printf("Socket %d created\n", listen_socket);
+
+  int32_t option_value = 1;
+  // Set socket options
+  setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &option_value, sizeof(option_value));
+
+  struct sockaddr_in listen_socket_addr;
+  listen_socket_addr.sin_family = AF_INET;
+  listen_socket_addr.sin_port = htons(10002);
+  listen_socket_addr.sin_addr.s_addr = INADDR_ANY;
+  //listen_socket_addr.sin_addr.s_addr = inet_addr("10.20.30.2");
+
+  // man 7 ip
+  ret_val = bind(listen_socket, (const struct sockaddr *restrict)&listen_socket_addr, sizeof(listen_socket_addr));
+  if (ret_val == -1) {
+      perror("Binding can't be done");
+      return -2;
+  }
+  printf("Socket was bountd with address\n");
+/*
+  ret_val = listen(listen_socket, 1);
+  if (ret_val == -1) {
+
+      perror("Listening can't be started");
+      close(listen_socket);
+      return -3;
+  }
+  printf("\nListening was started\n");
+
+  struct sockaddr_in client_addr;
+  socklen_t client_addr_len;
+  int communication_socket;
+  while(1) {
+      if (exit_flag == 1) {
+        printf("Program was interrupted\n");
+        close(listen_socket);
+//        exit(-7);
+        return -7;
+      }
+
+      communication_socket = accept(listen_socket, (struct sockaddr *restrict)&client_addr, &client_addr_len);
+      if (communication_socket == -1) {
+          if (errno == EAGAIN) {
+              sleep(1);
+//              printf("Connection request hasn't received\n");
+              continue;
+          }
+          perror("Accepting can't be done");
+          close(listen_socket);
+          return -4;
+      }
+
+
+    printf("Connection %d was accepted\n", communication_socket);
+*/
+    struct rbuff_t rbuff;
+    uint8_t buffer[16];
+    size_t len = sizeof(buffer);
+    init_rbuff(&rbuff);
+    while (1) {
+        if (exit_flag == 1) {
+          printf("Program was interrupted\n");
+          close(listen_socket);
+  //        exit(-7);
+          return -7;
+        }
+
+//        ssize_t recv_val = recv(listen_socket, buffer, len, MSG_DONTWAIT);
+        struct sockaddr_in src_addr;
+        socklen_t src_addr_len;
+        ssize_t recv_val = recvfrom(listen_socket, buffer, len, MSG_DONTWAIT, (struct sockaddr *restrict)&src_addr, (socklen_t *restrict)&src_addr_len);
+        if (recv_val == -1) { // Receiving finished with error
+            if (errno == EAGAIN) { // No data to receive during non blocking receiving
+                printf("Data hasn't received\n");
+                sleep(1);
+                continue;
+
+            } else { // Receiving finished with error
+              perror("Receiving can't be carried out\n");
+              close(listen_socket);
+              return -5;
+            }
+
+        } else if (recv_val == 0) { // Receiving can't be done due to closed connection
+            printf("Connection was closed\n");
+            sleep(1);
+            break; // Start listening again
+
+        } else { // recv_val > 0 // Receiving finished successfully
+          // Data processing
+          size_t data_length = recv_val;
+          copy_to_rbuff(&rbuff, buffer, &data_length);
+          printf("Data received\n");
+          char src_addr_str[32];
+          inet_ntop(AF_INET, &(src_addr.sin_addr), src_addr_str, sizeof(src_addr_str));
+          printf("Source address: %s, port: %d\n", src_addr_str, ntohs(src_addr.sin_port));
+          process_data(&rbuff, listen_socket, &src_addr);
+          debug_print_rbuff(&rbuff);
+        }
+    } // Receiving loop
+/*    printf("\nListening was started\n");
+  } // Accepting loop
+//  send();
+*/
+  close(listen_socket);
+  close_tty(tty_fd);
+  return 0;
+}
+/*
+int32_t tcp_main(int argc, char * argv[]) {
 //  rbuff_test();
 //  return 0;
   if (argc < 4) {
@@ -638,3 +784,4 @@ int32_t main(int argc, char * argv[]) {
   close_tty(tty_fd);
   return 0;
 }
+*/
