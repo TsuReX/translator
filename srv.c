@@ -319,7 +319,7 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
   write(tty_fd, cmd, sizeof(answer));
   nanosleep(&duration, NULL);
   int32_t read_count = 0;
-/*  for (;read_count < sizeof(answer);) {
+  for (;read_count < sizeof(answer);) {
     ret_val = read(tty_fd, answer + read_count, sizeof(answer) - read_count); // TODO Determine the size of answewr to be received
     if (ret_val == -1 && errno != EAGAIN) {
      perror("Reading data from serial interface failed");
@@ -332,7 +332,7 @@ int32_t process_cmd(const char * cmd, int32_t tty_fd, int32_t communication_sock
     if (strstr((char*)answer, "\n") != NULL) {
       break;
     }
-  }*/
+  }
   strcpy((char *)answer, cmd);
   printf("Answer is: %s\n", answer);
   sendto(communication_socket, answer, strlen((char *)answer), 0, (const struct sockaddr *)src_addr, sizeof(struct sockaddr_in));
@@ -606,11 +606,11 @@ int32_t main(int argc, char * argv[]) {
 
 //        ssize_t recv_val = recv(listen_socket, buffer, len, MSG_DONTWAIT);
         struct sockaddr_in src_addr;
-        socklen_t src_addr_len;
+        socklen_t src_addr_len = sizeof(struct sockaddr);
         ssize_t recv_val = recvfrom(listen_socket, buffer, len, MSG_DONTWAIT, (struct sockaddr *restrict)&src_addr, (socklen_t *restrict)&src_addr_len);
         if (recv_val == -1) { // Receiving finished with error
             if (errno == EAGAIN) { // No data to receive during non blocking receiving
-                printf("Data hasn't received\n");
+//                printf("Data hasn't received\n");
                 sleep(1);
                 continue;
 
@@ -629,13 +629,14 @@ int32_t main(int argc, char * argv[]) {
           // Data processing
           size_t data_length = recv_val;
           copy_to_rbuff(&rbuff, buffer, &data_length);
-          printf("Data received\n");
+/*          printf("Data received\n");
           char src_addr_str[32];
           inet_ntop(AF_INET, &(src_addr.sin_addr), src_addr_str, sizeof(src_addr_str));
           printf("Source address: %s, port: %d\n", src_addr_str, ntohs(src_addr.sin_port));
+*/
           process_data(&rbuff, listen_socket, &src_addr);
-          debug_print_rbuff(&rbuff);
-        }
+//          debug_print_rbuff(&rbuff);
+      }
     } // Receiving loop
 /*    printf("\nListening was started\n");
   } // Accepting loop
